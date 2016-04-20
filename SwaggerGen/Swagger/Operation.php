@@ -125,7 +125,7 @@ class Operation extends AbstractDocumentableObject
 				}
 				$scopes = self::wordSplit($data);
 				sort($scopes);
-				$this->security[$name] = $scopes;
+				$this->security[][$name] = $scopes;
 				return $this;
 
 			//@todo operationId			
@@ -153,7 +153,8 @@ class Operation extends AbstractDocumentableObject
 		$produces = array_unique($this->produces);
 		sort($produces);
 
-		foreach ($this->security as $name => $scopes) {
+		foreach ($this->security as $element) {
+            $name = key($element);
 			if ($this->getRoot()->getSecurity($name) === false) {
 				throw new \SwaggerGen\Exception("Required security scheme not defined: '{$name}'");
 			}
