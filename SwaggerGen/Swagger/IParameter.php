@@ -13,4 +13,5 @@ namespace SwaggerGen\Swagger;
 interface IParameter
 {
 
+	public function getName();
 }

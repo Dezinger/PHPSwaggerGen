@@ -22,6 +22,7 @@ class Property extends \SwaggerGen\Swagger\AbstractObject
 		'float' => 'Number',
 		'double' => 'Number',
 		'string' => 'String',
+		'uuid' => 'StringUuid',
 		'byte' => 'String',
 		'binary' => 'String',
 		'password' => 'String',
@@ -38,8 +39,7 @@ class Property extends \SwaggerGen\Swagger\AbstractObject
 		'datetime' => 'Date',
 		'date-time' => 'Date',
 		'object' => 'Object',
-			//'file'	=> 'File';
-			//'set'		=> 'EnumArray';
+		'refobject' => 'ReferenceObject',
 	);
 
 	/**
@@ -50,10 +50,17 @@ class Property extends \SwaggerGen\Swagger\AbstractObject
 
 	/**
 	 * Type definition of this property
-	 * @var Type\AbstractType
+	 * @var \SwaggerGen\Swagger\Type\AbstractType
 	 */
 	private $Type;
 
+	/**
+	 * Create a new property
+	 * @param \SwaggerGen\Swagger\AbstractObject $parent
+	 * @param string $definition Either a built-in type or a definition name
+	 * @param string $description description of the property
+	 * @throws \SwaggerGen\Exception
+	 */
 	public function __construct(\SwaggerGen\Swagger\AbstractObject $parent, $definition, $description = null)
 	{
 		parent::__construct($parent);
@@ -69,12 +76,17 @@ class Property extends \SwaggerGen\Swagger\AbstractObject
 			$class = "SwaggerGen\\Swagger\\Type\\{$type}Type";
 			$this->Type = new $class($this, $definition);
 		} else {
-			throw new \SwaggerGen\Exception("Property format not recognized: '{$format}'");
+			$this->Type = new \SwaggerGen\Swagger\Type\ReferenceObjectType($this, $definition);
 		}
 
 		$this->description = $description;
 	}
 
+	/**
+	 * @param string $command The comment command
+	 * @param string $data Any data added after the command
+	 * @return \SwaggerGen\Swagger\Type\AbstractType|boolean
+	 */
 	public function handleCommand($command, $data = null)
 	{
 		// Pass through to Type
@@ -88,7 +100,7 @@ class Property extends \SwaggerGen\Swagger\AbstractObject
 	public function toArray()
 	{
 		return self::arrayFilterNull(array_merge($this->Type->toArray(), array(
-					'description' => $this->description,
+					'description' => empty($this->description) ? null : $this->description,
 								), parent::toArray()));
 	}
 

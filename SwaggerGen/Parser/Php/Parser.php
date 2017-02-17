@@ -24,7 +24,11 @@ class Parser extends Entity\AbstractEntity implements \SwaggerGen\Parser\IParser
 	private $dirs = array();
 // States
 
-	public $Statements = array();
+	public $statements = array();
+
+	/**
+	 * @var \SwaggerGen\Statement[]|null
+	 */
 	private $lastStatements = array();
 
 	/**
@@ -49,7 +53,7 @@ class Parser extends Entity\AbstractEntity implements \SwaggerGen\Parser\IParser
 	 */
 	protected $common_dirs = array();
 
-	public function __construct(Array $dirs = array())
+	public function __construct(array $dirs = array())
 	{
 		foreach ($dirs as $dir) {
 			$this->common_dirs[] = realpath($dir);
@@ -58,14 +62,39 @@ class Parser extends Entity\AbstractEntity implements \SwaggerGen\Parser\IParser
 		$this->Preprocessor = new Preprocessor(self::COMMENT_TAG);
 	}
 
-	public function addDirs(Array $dirs)
+	public function addDirs(array $dirs)
 	{
 		foreach ($dirs as $dir) {
 			$this->common_dirs[] = realpath($dir);
 		}
 	}
 
-	public function parse($file, Array $dirs = array(), Array $defines = array())
+	private function extractStatements()
+	{
+		// Core comments
+		$Statements = $this->statements;
+
+		// Functions
+		foreach ($this->Functions as $Function) {
+			if ($Function->hasCommand('method')) {
+				$Statements = array_merge($Statements, $Function->Statements);
+			}
+		}
+
+		// Classes
+		foreach ($this->Classes as $Class) {
+			$Statements = array_merge($Statements, $Class->Statements);
+			foreach ($Class->Methods as $Method) {
+				if ($Method->hasCommand('method')) {
+					$Statements = array_merge($Statements, $Method->Statements);
+				}
+			}
+		}
+
+		return $Statements;
+	}
+
+	public function parse($file, array $dirs = array(), array $defines = array())
 	{
 		$this->dirs = $this->common_dirs;
 		foreach ($dirs as $dir) {
@@ -86,27 +115,7 @@ class Parser extends Entity\AbstractEntity implements \SwaggerGen\Parser\IParser
 			}
 		}
 
-		// Core comments
-		$Statements = $this->Statements;
-
-		// Functions
-		foreach ($this->Functions as $Function) {
-			if ($Function->hasCommand('method')) {
-				$Statements = array_merge($Statements, $Function->Statements);
-			}
-		}
-
-		// Classes
-		foreach ($this->Classes as $Class) {
-			$Statements = array_merge($Statements, $Class->Statements);
-			foreach ($Class->Methods as $Method) {
-				if ($Method->hasCommand('method')) {
-					$Statements = array_merge($Statements, $Method->Statements);
-				}
-			}
-		}
-
-		return $Statements;
+		return $this->extractStatements();
 	}
 
 	/**
@@ -138,11 +147,11 @@ class Parser extends Entity\AbstractEntity implements \SwaggerGen\Parser\IParser
 		$command = null;
 		$data = '';
 		$commandLineNumber = 0;
-		$Statements = array();
+		$statements = array();
 		foreach ($commentLines as $lineNumber => $line) {
 			// If new @-command, store any old and start new
-			if ($command && chr(ord($line)) === '@') {
-				$Statements[] = new Statement($command, $data, $this->current_file, $commentLineNumber + $commandLineNumber);
+			if ($command !== null && chr(ord($line)) === '@') {
+				$statements[] = new \SwaggerGen\Statement($command, $data, $this->current_file, $commentLineNumber + $commandLineNumber);
 				$command = null;
 				$data = '';
 			}
@@ -151,20 +160,20 @@ class Parser extends Entity\AbstractEntity implements \SwaggerGen\Parser\IParser
 				$command = $match[1];
 				$data = $match[2];
 				$commandLineNumber = $lineNumber;
-			} elseif ($command) {
+			} elseif ($command !== null) {
 				if ($lineNumber < count($commentLines) - 1) {
-					$data.= ' ' . $line;
+					$data .= ' ' . $line;
 				} else {
-					$data.= preg_replace('~\s*\**\/\s*$~', '', $line);
+					$data .= preg_replace('~\s*\**\/\s*$~', '', $line);
 				}
 			}
 		}
 
-		if ($command) {
-			$Statements[] = new Statement($command, $data, $this->current_file, $commentLineNumber + $commandLineNumber);
+		if ($command !== null) {
+			$statements[] = new \SwaggerGen\Statement($command, $data, $this->current_file, $commentLineNumber + $commandLineNumber);
 		}
 
-		return $Statements;
+		return $statements;
 	}
 
 	public function queueClass($classname)
@@ -178,10 +187,8 @@ class Parser extends Entity\AbstractEntity implements \SwaggerGen\Parser\IParser
 			foreach ($paths as $path) {
 				$realpath = realpath($path);
 				if (in_array($realpath, $this->files_done)) {
-					//var_dump('already queued: '.$classname);
 					return;
 				} elseif (is_file($realpath)) {
-					//var_dump('new class queued: '.$classname.' as '.$realpath);
 					$this->files_queued[] = $realpath;
 					return;
 				}
@@ -195,12 +202,12 @@ class Parser extends Entity\AbstractEntity implements \SwaggerGen\Parser\IParser
 	 * Add to the queue any classes based on the commands.
 	 * @param \SwaggerGen\Statement[] $Statements
 	 */
-	public function queueClassesFromComments(Array $Statements)
+	public function queueClassesFromComments(array $Statements)
 	{
 		foreach ($Statements as $Statement) {
-			if ($Statement->command === 'uses' || $Statement->command === 'see') {
+			if (in_array($Statement->getCommand(), array('uses', 'see'))) {
 				$match = array();
-				if (preg_match('~^(\w+)(::|->)?(\w+)?(?:\(\))?$~', $Statement->data, $match) === 1) {
+				if (preg_match('~^(\w+)(::|->)?(\w+)?(?:\(\))?$~', $Statement->getData(), $match) === 1) {
 					if (!in_array($match[1], array('self', '$this'))) {
 						$this->queueClass($match[1]);
 					}
@@ -209,11 +216,70 @@ class Parser extends Entity\AbstractEntity implements \SwaggerGen\Parser\IParser
 		}
 	}
 
-	private function parseFiles(Array $files, Array $defines = array())
+	private function parseTokens($source)
+	{
+		$mode = null;
+		$namespace = '';
+
+		$tokens = token_get_all($source);
+		$token = reset($tokens);
+		while ($token) {
+			switch ($token[0]) {
+				case T_NAMESPACE:
+					$mode = T_NAMESPACE;
+					break;
+
+				case T_NS_SEPARATOR:
+				case T_STRING:
+					if ($mode === T_NAMESPACE) {
+						$namespace .= $token[1];
+					}
+					break;
+
+				case ';':
+					$mode = null;
+					break;
+
+				case T_CLASS:
+				case T_INTERFACE:
+					$Class = new Entity\ParserClass($this, $tokens, $this->lastStatements);
+					$this->Classes[strtolower($Class->name)] = $Class;
+					$this->lastStatements = null;
+					break;
+
+				case T_FUNCTION:
+					$Function = new Entity\ParserFunction($this, $tokens, $this->lastStatements);
+					$this->Functions[strtolower($Function->name)] = $Function;
+					$this->lastStatements = null;
+					break;
+
+				case T_COMMENT:
+					if ($this->lastStatements !== null) {
+						$this->statements = array_merge($this->statements, $this->lastStatements);
+						$this->lastStatements = null;
+					}
+					$Statements = $this->tokenToStatements($token);
+					$this->queueClassesFromComments($Statements);
+					$this->statements = array_merge($this->statements, $Statements);
+					break;
+
+				case T_DOC_COMMENT:
+					if ($this->lastStatements !== null) {
+						$this->statements = array_merge($this->statements, $this->lastStatements);
+					}
+					$Statements = $this->tokenToStatements($token);
+					$this->queueClassesFromComments($Statements);
+					$this->lastStatements = $Statements;
+					break;
+			}
+
+			$token = next($tokens);
+		}
+	}
+
+	private function parseFiles(array $files, array $defines = array())
 	{
 		$this->files_queued = $files;
-
-		$Statements = array();
 
 		$index = 0;
 		while (($file = array_shift($this->files_queued)) !== null) {
@@ -232,68 +298,10 @@ class Parser extends Entity\AbstractEntity implements \SwaggerGen\Parser\IParser
 			$this->Preprocessor->addDefines($defines);
 			$source = $this->Preprocessor->preprocessFile($file);
 
-			$mode = null;
-			$namespace = '';
+			$this->parseTokens($source);
 
-			$tokens = token_get_all($source);
-			$token = reset($tokens);
-			while ($token) {
-				switch ($token[0]) {
-					case T_NAMESPACE:
-						$mode = T_NAMESPACE;
-						break;
-
-					case T_NS_SEPARATOR;
-					case T_STRING;
-						if ($mode === T_NAMESPACE) {
-							$namespace .= $token[1];
-						}
-						break;
-
-					case ';':
-						$mode = null;
-						break;
-
-					case T_CLASS:
-					case T_INTERFACE:
-						$Class = new Entity\ParserClass($this, $tokens, $this->lastStatements);
-						$this->Classes[strtolower($Class->name)] = $Class;
-						$this->lastStatements = null;
-						break;
-
-					case T_FUNCTION:
-						$Function = new Entity\ParserFunction($this, $tokens, $this->lastStatements);
-						$this->Functions[strtolower($Function->name)] = $Function;
-						$this->lastStatements = null;
-						break;
-
-					case T_COMMENT:
-						if ($this->lastStatements) {
-							$this->Statements = array_merge($this->Statements, $this->lastStatements);
-							$this->lastStatements = null;
-						}
-						$Statements = $this->tokenToStatements($token);
-						$this->queueClassesFromComments($Statements);
-						$this->Statements = array_merge($this->Statements, $Statements);
-						break;
-
-					case T_DOC_COMMENT:
-						if ($this->lastStatements) {
-							$this->Statements = array_merge($this->Statements, $this->lastStatements);
-						}
-						$Statements = $this->tokenToStatements($token);
-						$this->queueClassesFromComments($Statements);
-						$this->lastStatements = $Statements;
-						break;
-				}
-
-				$token = next($tokens);
-			}
-
-			//var_dump($namespace);	//@todo do something with this -> assign to classes and use for queueing, classloader and inheritance (relative/absolute!)
-
-			if ($this->lastStatements) {
-				$this->Statements = array_merge($this->Statements, $this->lastStatements);
+			if ($this->lastStatements !== null) {
+				$this->statements = array_merge($this->statements, $this->lastStatements);
 				$this->lastStatements = null;
 			}
 		}
@@ -328,14 +336,14 @@ class Parser extends Entity\AbstractEntity implements \SwaggerGen\Parser\IParser
 	 * @param \SwaggerGen\Statement[] $Statements
 	 * @return \SwaggerGen\Statement[]
 	 */
-	private function expand(Array $Statements, Entity\ParserClass $Self = null)
+	private function expand(array $Statements, Entity\ParserClass $Self = null)
 	{
 		$output = array();
 
 		$match = null;
 		foreach ($Statements as $Statement) {
-			if ($Statement->command === 'uses' || $Statement->command === 'see') { //@todo either one, not both?
-				if (preg_match('/^((?:\\w+)|\$this)(?:(::|->)(\\w+))?(?:\\(\\))?$/', strtolower($Statement->data), $match) === 1) {
+			if (in_array($Statement->getCommand(), array('uses', 'see'))) {
+				if (preg_match('/^((?:\\w+)|\$this)(?:(::|->)(\\w+))?(?:\\(\\))?$/', strtolower($Statement->getData()), $match) === 1) {
 					if (count($match) >= 3) {
 						$Class = null;
 						if (in_array($match[1], array('$this', 'self', 'static'))) {

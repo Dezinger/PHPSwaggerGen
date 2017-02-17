@@ -23,7 +23,7 @@ abstract class AbstractDocumentableObject extends AbstractObject
 	/**
 	 * @param string $command
 	 * @param string $data
-	 * @return AbstractObject
+	 * @return \SwaggerGen\Swagger\AbstractObject|boolean
 	 */
 	public function handleCommand($command, $data = null)
 	{

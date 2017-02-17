@@ -17,7 +17,6 @@ class Operation extends AbstractDocumentableObject
 	private $tags = array();
 	private $summary;
 	private $description;
-	private $operationid;
 	private $consumes = array();
 	private $produces = array();
 
@@ -30,6 +29,11 @@ class Operation extends AbstractDocumentableObject
 	private $deprecated = false;
 	private $security = array();
 
+	/**
+	 * @var string
+	 */
+	private $operationId = null;
+
 	public function getConsumes()
 	{
 		return $this->consumes;
@@ -39,12 +43,16 @@ class Operation extends AbstractDocumentableObject
 	{
 		parent::__construct($parent);
 		$this->summary = $summary;
-		$this->operationid = uniqid('', true); //@todo getSwagger()->title -> Do some complex construction?
 		if ($tag) {
 			$this->tags[] = $tag->getName();
 		}
 	}
 
+	/**
+	 * @param string $command
+	 * @param string $data
+	 * @return \SwaggerGen\Swagger\AbstractObject|boolean
+	 */
 	public function handleCommand($command, $data = null)
 	{
 		switch (strtolower($command)) {
@@ -93,30 +101,48 @@ class Operation extends AbstractDocumentableObject
 				return $this;
 
 			case 'path':
-			case 'query': case 'query?':
-			case 'header': case 'header?':
-			case 'form': case 'form?':
+			case 'query':
+			case 'query?':
+			case 'header':
+			case 'header?':
+			case 'form':
+			case 'form?':
 				$in = rtrim($command, '?');
-				$Parameter = new Parameter($this, $in, $data, substr($command, -1) !== '?');
-				$this->parameters[] = $Parameter;
-				return $Parameter;
+				$parameter = new Parameter($this, $in, $data, substr($command, -1) !== '?');
+				$this->parameters[$parameter->getName()] = $parameter;
+				return $parameter;
 
-			case 'body': case 'body?':
-				$Parameter = new BodyParameter($this, $data, substr($command, -1) !== '?');
-				$this->parameters[] = $Parameter;
-				return $Parameter;
+			case 'body':
+			case 'body?':
+				$parameter = new BodyParameter($this, $data, substr($command, -1) !== '?');
+				$this->parameters[$parameter->getName()] = $parameter;
+				return $parameter;
+
+			case 'param':
+			case 'parameter':
+				$parameter = new ParameterReference($this, $data);
+				$this->parameters[$parameter->getName()] = $parameter;
+				return $this;
 
 			case 'response':
 				$code = self::wordShift($data);
 				$reasoncode = Response::getCode($code);
 				if ($reasoncode === null) {
-					throw new \SwaggerGen\Exception("Invalid response code: '$code'");
+					$reference = $code;
+					$code = self::wordShift($data);
+					$reasoncode = Response::getCode($code);
+					if ($reasoncode === null) {
+						throw new \SwaggerGen\Exception("Invalid response code: '$reference'");
+					}
+					$this->responses[$reasoncode] = new ResponseReference($this, $reference);
+					return $this;
+				} else {
+					$definition = self::wordShift($data);
+					$description = $data;
+					$Response = new Response($this, $reasoncode, $definition, $description);
+					$this->responses[$reasoncode] = $Response;
+					return $Response;
 				}
-				$definition = self::wordShift($data);
-				$description = $data;
-				$Response = new Response($this, $reasoncode, $definition, $description);
-				$this->responses[$reasoncode] = $Response;
-				return $Response;
 
 			case 'require':
 				$name = self::wordShift($data);
@@ -125,10 +151,18 @@ class Operation extends AbstractDocumentableObject
 				}
 				$scopes = self::wordSplit($data);
 				sort($scopes);
-				$this->security[][$name] = $scopes;
+				$this->security[] = array(
+					$name => empty($scopes) ? array() : $scopes,
+				);
 				return $this;
 
-			//@todo operationId			
+			case 'id':
+				$operationId = self::trim($data);
+				if ($this->getSwagger()->hasOperationId($operationId)) {
+					throw new \SwaggerGen\Exception("Duplicate operation id '{$operationId}'");
+				}
+				$this->operationId = $operationId;
+				return $this;
 		}
 
 		return parent::handleCommand($command, $data);
@@ -153,26 +187,39 @@ class Operation extends AbstractDocumentableObject
 		$produces = array_unique($this->produces);
 		sort($produces);
 
-		foreach ($this->security as $element) {
-            $name = key($element);
-			if ($this->getRoot()->getSecurity($name) === false) {
-				throw new \SwaggerGen\Exception("Required security scheme not defined: '{$name}'");
+		foreach ($this->security as $security) {
+			foreach ($security as $name => $scope) {
+				if ($this->getSwagger()->getSecurity($name) === false) {
+					throw new \SwaggerGen\Exception("Required security scheme not defined: '{$name}'");
+				}
 			}
 		}
+
+		$parameters = $this->parameters ? array_values($this->parameters) : null;
 
 		return self::arrayFilterNull(array_merge(array(
 					'deprecated' => $this->deprecated ? true : null,
 					'tags' => $tags,
 					'summary' => empty($this->summary) ? null : $this->summary,
 					'description' => empty($this->description) ? null : $this->description,
-					//'operationId' => $this->description,
+					'operationId' => $this->operationId,
 					'consumes' => $consumes,
 					'produces' => $produces,
-					'parameters' => $this->parameters ? self::objectsToArray($this->parameters) : null,
+					'parameters' => $parameters ? self::objectsToArray($parameters) : null,
 					'schemes' => $schemes,
 					'responses' => $this->responses ? self::objectsToArray($this->responses) : null,
 					'security' => $this->security,
 								), parent::toArray()));
+	}
+
+	/**
+	 * Return the operation ID
+	 * 
+	 * @return string
+	 */
+	public function getId()
+	{
+		return $this->operationId;
 	}
 
 	public function __toString()

@@ -13,6 +13,9 @@ namespace SwaggerGen\Swagger;
 class BodyParameter extends AbstractObject implements IParameter
 {
 
+	/**
+	 * @var string|boolean
+	 */
 	private $name = '';
 	private $description;
 	private $required = false;
@@ -42,6 +45,11 @@ class BodyParameter extends AbstractObject implements IParameter
 		$this->schema = new Schema($this, $type);
 	}
 
+	/**
+	 * @param string $command
+	 * @param string $data
+	 * @return \SwaggerGen\Swagger\AbstractObject|boolean
+	 */
 	public function handleCommand($command, $data = null)
 	{
 		// Pass through to Type
@@ -67,6 +75,11 @@ class BodyParameter extends AbstractObject implements IParameter
 	public function __toString()
 	{
 		return __CLASS__ . ' ' . $this->name;
+	}
+
+	public function getName()
+	{
+		return $this->name;
 	}
 
 }

@@ -26,7 +26,7 @@ abstract class AbstractPreprocessor
 		$this->defines = array();
 	}
 
-	public function addDefines(Array $defines)
+	public function addDefines(array $defines)
 	{
 		$this->defines = array_merge($this->defines, $defines);
 	}
@@ -108,13 +108,12 @@ abstract class AbstractPreprocessor
 				unset($this->defines[$expression]);
 				break;
 
-			case 'endif';
+			case 'endif':
 				array_pop($this->stack);
 				break;
 
 			default:
 				return false;
-				break;
 		}
 
 		return true;

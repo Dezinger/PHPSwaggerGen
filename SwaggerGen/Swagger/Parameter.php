@@ -26,6 +26,7 @@ class Parameter extends AbstractObject implements IParameter
 		'binary' => 'String',
 		'password' => 'String',
 		'enum' => 'String',
+		'uuid' => 'StringUuid',
 		'boolean' => 'Boolean',
 		'bool' => 'Boolean',
 		'array' => 'Array',
@@ -38,7 +39,6 @@ class Parameter extends AbstractObject implements IParameter
 		'datetime' => 'Date',
 		'date-time' => 'Date',
 		'file' => 'File',
-			//'set'		=> 'EnumArray',
 	);
 	private $name = '';
 	private $in;
@@ -83,9 +83,11 @@ class Parameter extends AbstractObject implements IParameter
 			throw new \SwaggerGen\Exception('No type definition for parameter');
 		}
 
-		$this->name = self::wordShift($data);
-		if (empty($this->name)) {
+		$name = self::wordShift($data);
+		if (empty($name)) {
 			throw new \SwaggerGen\Exception('No name for parameter');
+		} else {
+			$this->name = $name;
 		}
 
 		$this->description = $data;
@@ -93,7 +95,7 @@ class Parameter extends AbstractObject implements IParameter
 
 		// Parse regex
 		$match = array();
-		$count = preg_match('/^([a-z]+)/i', $definition, $match);
+		preg_match('/^([a-z]+)/i', $definition, $match);
 		$format = strtolower($match[1]);
 		if (isset(self::$classTypes[$format])) {
 			$type = self::$classTypes[$format];
@@ -104,6 +106,11 @@ class Parameter extends AbstractObject implements IParameter
 		}
 	}
 
+	/**
+	 * @param string $command
+	 * @param string $data
+	 * @return \SwaggerGen\Swagger\AbstractObject|boolean
+	 */
 	public function handleCommand($command, $data = null)
 	{
 		// Pass through to Type
@@ -127,6 +134,11 @@ class Parameter extends AbstractObject implements IParameter
 	public function __toString()
 	{
 		return __CLASS__ . " {$this->name} {$this->in}";
+	}
+
+	public function getName()
+	{
+		return $this->name;
 	}
 
 }

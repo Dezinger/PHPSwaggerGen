@@ -21,7 +21,6 @@ class NumberType extends AbstractType
 		'double' => 'double',
 	);
 	private $format;
-	//private $allowEmptyValue; // for query/formData
 	private $default = null;
 	private $maximum = null;
 	private $exclusiveMaximum = null;
@@ -36,12 +35,22 @@ class NumberType extends AbstractType
 		if (preg_match(self::REGEX_START . self::REGEX_FORMAT . self::REGEX_RANGE . self::REGEX_DEFAULT . self::REGEX_END, $definition, $match) !== 1) {
 			throw new \SwaggerGen\Exception("Unparseable number definition: '{$definition}'");
 		}
+		
+		$this->parseFormat($definition, $match);
+		$this->parseRange($definition, $match);
+		$this->parseDefault($definition, $match);
+	}
 
+	private function parseFormat($definition, $match)
+	{
 		if (!isset(self::$formats[strtolower($match[1])])) {
 			throw new \SwaggerGen\Exception("Not a number: '{$definition}'");
 		}
 		$this->format = self::$formats[strtolower($match[1])];
+	}
 
+	private function parseRange($definition, $match)
+	{
 		if (!empty($match[2])) {
 			if ($match[3] === '' && $match[4] === '') {
 				throw new \SwaggerGen\Exception("Empty number range: '{$definition}'");
@@ -56,10 +65,18 @@ class NumberType extends AbstractType
 				self::swap($this->exclusiveMinimum, $this->exclusiveMaximum);
 			}
 		}
+	}
 
+	private function parseDefault($definition, $match)
+	{
 		$this->default = isset($match[6]) && $match[6] !== '' ? $this->validateDefault($match[6]) : null;
 	}
 
+	/**
+	 * @param string $command The comment command
+	 * @param string $data Any data added after the command
+	 * @return \SwaggerGen\Swagger\Type\AbstractType|boolean
+	 */
 	public function handleCommand($command, $data = null)
 	{
 		switch (strtolower($command)) {

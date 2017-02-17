@@ -7,7 +7,7 @@ class ReferenceObjectTypeTest extends PHPUnit_Framework_TestCase
 
 	protected function setUp()
 	{
-		$this->parent = $this->getMockForAbstractClass('\SwaggerGen\Swagger\AbstractObject');
+		$this->parent = $this->getMockForAbstractClass('\SwaggerGen\Swagger\Swagger');
 	}
 
 	protected function assertPreConditions()
@@ -20,12 +20,13 @@ class ReferenceObjectTypeTest extends PHPUnit_Framework_TestCase
 	 */
 	public function testConstructBothConsumes()
 	{
+		$this->parent->handleCommand('model', 'blah');
+		
 		$object = new SwaggerGen\Swagger\Type\ReferenceObjectType($this->parent, 'blah');
 
 		$this->assertInstanceOf('\SwaggerGen\Swagger\Type\ReferenceObjectType', $object);
 
 		$this->assertSame(array(
-			'type' => 'object',
 			'$ref' => '#/definitions/blah',
 				), $object->toArray());
 	}

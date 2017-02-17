@@ -12,74 +12,63 @@ namespace SwaggerGen\Swagger\Type;
  */
 class ObjectType extends AbstractType
 {
+	const REGEX_PROP_START = '/^';
+	const REGEX_PROP_NAME = '([^?:]+)';
+	const REGEX_PROP_REQUIRED = '(\?)?';
+	const REGEX_PROP_ASSIGN = ':';
+	const REGEX_PROP_DEFINITION = '(.+)';
+	const REGEX_PROP_END = '$/';
 
-	const REGEX_PROP_START = '/([^:\?]+)(\?)?:';
-	const REGEX_PROP_FORMAT = '[a-z]+';
-	const REGEX_PROP_CONTENT = '(?:\(.*\))?';
-	const REGEX_PROP_RANGE = '(?:[[<][^,]*,[^,]*[\\]>])?';
-	const REGEX_PROP_DEFAULT = '(?:=.+?)?';
-	const REGEX_PROP_END = '(?:,|$)/i';
-
-	private static $classTypes = array(
-		'integer' => 'Integer',
-		'int' => 'Integer',
-		'int32' => 'Integer',
-		'int64' => 'Integer',
-		'long' => 'Integer',
-		'float' => 'Number',
-		'double' => 'Number',
-		'string' => 'String',
-		'byte' => 'String',
-		'binary' => 'String',
-		'password' => 'String',
-		'enum' => 'String',
-		'boolean' => 'Boolean',
-		'bool' => 'Boolean',
-		'array' => 'Array',
-		'csv' => 'Array',
-		'ssv' => 'Array',
-		'tsv' => 'Array',
-		'pipes' => 'Array',
-		'date' => 'Date',
-		'datetime' => 'Date',
-		'date-time' => 'Date',
-			//'set'		=> 'EnumArray';
-	);
-
-	/**
-	 * @var AbstractType
-	 */
-	private $Properties = array();
 	private $minProperties = null;
 	private $maxProperties = null;
 	private $required = array();
+
+	/**
+	 * @var Property[]
+	 */
 	private $properties = array();
 
 	protected function parseDefinition($definition)
 	{
+		$definition = self::trim($definition);
+
 		$match = array();
 		if (preg_match(self::REGEX_START . self::REGEX_FORMAT . self::REGEX_CONTENT . self::REGEX_RANGE . self::REGEX_END, $definition, $match) !== 1) {
 			throw new \SwaggerGen\Exception("Unparseable object definition: '{$definition}'");
 		}
 
-		$type = strtolower($match[1]);
-		if ($type !== 'object') {
+		$this->parseFormat($definition, $match);
+		$this->parseProperties($definition, $match);
+		$this->parseRange($definition, $match);
+	}
+
+	private function parseFormat($definition, $match)
+	{
+		if (strtolower($match[1]) !== 'object') {
 			throw new \SwaggerGen\Exception("Not an object: '{$definition}'");
 		}
+	}
 
+	private function parseProperties($definition, $match)
+	{
 		if (!empty($match[2])) {
-			$prop_matches = array();
-			if (preg_match_all(self::REGEX_PROP_START . '(' . self::REGEX_PROP_FORMAT . self::REGEX_PROP_CONTENT . self::REGEX_PROP_RANGE . self::REGEX_PROP_DEFAULT . ')' . self::REGEX_PROP_END, $match[2], $prop_matches, PREG_SET_ORDER) === 0) {
-				throw new \SwaggerGen\Exception("Unparseable properties definition: '{$match[2]}'");
-			}
-			foreach ($prop_matches as $prop_match) {
-				$this->properties[$prop_match[1]] = new Property($this, $prop_match[3]);
-				if ($prop_match[2] !== '?') {
-					$this->required[] = $prop_match[1];
+			do {
+				if (($property = self::extract_property($match[2])) !== '') {
+					$prop_match = array();	 
+					if (preg_match(self::REGEX_PROP_START . self::REGEX_PROP_NAME . self::REGEX_PROP_REQUIRED . self::REGEX_PROP_ASSIGN . self::REGEX_PROP_DEFINITION . self::REGEX_PROP_END, $property, $prop_match) !== 1) {
+						throw new \SwaggerGen\Exception("Unparseable property definition: '{$property}'");
+					}
+					$this->properties[$prop_match[1]] = new Property($this, $prop_match[3]);
+					if ($prop_match[2] !== '?') {
+						$this->required[$prop_match[1]] = true;
+					}
 				}
-			}
+			} while ($property !== '');
 		}
+	}
 
+	private function parseRange($definition, $match)
+	{
 		if (!empty($match[3])) {
 			if ($match[4] === '' && $match[5] === '') {
 				throw new \SwaggerGen\Exception("Empty object range: '{$definition}'");
@@ -98,6 +87,11 @@ class ObjectType extends AbstractType
 		}
 	}
 
+	/**
+	 * @param string $command The comment command
+	 * @param string $data Any data added after the command
+	 * @return \SwaggerGen\Swagger\Type\AbstractType|boolean
+	 */
 	public function handleCommand($command, $data = null)
 	{
 		switch (strtolower($command)) {
@@ -116,8 +110,9 @@ class ObjectType extends AbstractType
 
 				$this->properties[$name] = new Property($this, $definition, $data);
 
+				unset($this->required[$name]);
 				if (substr($command, -1) !== '?') {
-					$this->required[] = $name;
+					$this->required[$name] = true;
 				}
 				return $this;
 
@@ -150,7 +145,7 @@ class ObjectType extends AbstractType
 	{
 		return self::arrayFilterNull(array(
 					'type' => 'object',
-					'required' => $this->required,
+					'required' => array_keys($this->required),
 					'properties' => self::objectsToArray($this->properties),
 					'minProperties' => $this->minProperties,
 					'maxProperties' => $this->maxProperties,
@@ -160,6 +155,39 @@ class ObjectType extends AbstractType
 	public function __toString()
 	{
 		return __CLASS__;
+	}
+
+	/**
+	 * Extract a property from a comma-separated list of properties.
+	 * 
+	 * i.e. `a(x(x,x)),b(x)` returns `a(x(x,x))` and changes `$subject` into `b(x)`.
+	 * 
+	 * @param string $properties string variable
+	 * @return string the extracted string
+	 */
+	private static function extract_property(&$properties)
+	{
+		$property = '';
+		
+		$depth = 0;
+		$index = 0;
+		while ($index < strlen($properties)) {
+			$character = $properties{$index++};			
+
+			if (strpos('([<', $character) !== false) {
+				++$depth;
+			} elseif (strpos(')]>', $character) !== false) {
+				--$depth;
+			} elseif ($character === ',' && $depth === 0) {
+				break;
+			}
+
+			$property .= $character;
+		}
+
+		$properties = substr($properties, $index);
+
+		return $property;
 	}
 
 }

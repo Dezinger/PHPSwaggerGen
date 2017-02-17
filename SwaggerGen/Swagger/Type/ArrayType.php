@@ -22,6 +22,7 @@ class ArrayType extends AbstractType
 		'float' => 'Number',
 		'double' => 'Number',
 		'string' => 'String',
+		'uuid' => 'StringUuid',
 		'byte' => 'String',
 		'binary' => 'String',
 		'password' => 'String',
@@ -37,7 +38,6 @@ class ArrayType extends AbstractType
 		'datetime' => 'Date',
 		'date-time' => 'Date',
 		'object' => 'Object',
-			//'set'		=> 'EnumArray';
 	);
 	private static $collectionFormats = array(
 		'array' => 'csv',
@@ -47,9 +47,6 @@ class ArrayType extends AbstractType
 		'pipes' => 'pipes',
 		'multi' => 'multi',
 	);
-
-//	//private $allowEmptyValue; // for query/formData
-//	private $default;
 
 	/**
 	 * @var AbstractType
@@ -61,11 +58,20 @@ class ArrayType extends AbstractType
 
 	protected function parseDefinition($definition)
 	{
+		$definition = self::trim($definition);
+
 		$match = array();
 		if (preg_match(self::REGEX_START . self::REGEX_FORMAT . self::REGEX_CONTENT . self::REGEX_RANGE . self::REGEX_END, $definition, $match) !== 1) {
 			throw new \SwaggerGen\Exception("Unparseable array definition: '{$definition}'");
 		}
+		
+		$this->parseFormat($definition, $match);
+		$this->parseItems($definition, $match);
+		$this->parseRange($definition, $match);
+	}
 
+	private function parseFormat($definition, $match)
+	{
 		$type = strtolower($match[1]);
 		if (!isset(self::$collectionFormats[$type])) {
 			throw new \SwaggerGen\Exception("Not an array: '{$definition}'");
@@ -79,11 +85,17 @@ class ArrayType extends AbstractType
 		}
 
 		$this->collectionFormat = self::$collectionFormats[$type];
+	}
 
+	private function parseItems($definition, $match)
+	{
 		if (!empty($match[2])) {
 			$this->Items = $this->validateItems($match[2]);
 		}
+	}
 
+	private function parseRange($definition, $match)
+	{
 		if (!empty($match[3])) {
 			if ($match[4] === '' && $match[5] === '') {
 				throw new \SwaggerGen\Exception("Empty array range: '{$definition}'");
@@ -102,6 +114,11 @@ class ArrayType extends AbstractType
 		}
 	}
 
+	/**
+	 * @param string $command The comment command
+	 * @param string $data Any data added after the command
+	 * @return \SwaggerGen\Swagger\Type\AbstractType|boolean
+	 */
 	public function handleCommand($command, $data = null)
 	{
 		if ($this->Items) {

@@ -3,18 +3,6 @@
 class SwaggerTest extends PHPUnit_Framework_TestCase
 {
 
-	protected $parent;
-
-	protected function setUp()
-	{
-		$this->parent = $this->getMockForAbstractClass('\SwaggerGen\Swagger\AbstractObject');
-	}
-
-	protected function assertPreConditions()
-	{
-		$this->assertInstanceOf('\SwaggerGen\Swagger\AbstractObject', $this->parent);
-	}
-
 	/**
 	 * @covers \SwaggerGen\Swagger\Swagger::__construct
 	 */
@@ -42,7 +30,7 @@ class SwaggerTest extends PHPUnit_Framework_TestCase
 			'swagger' => '2.0',
 			'info' => array(
 				'title' => 'undefined',
-				'version' => 0,
+				'version' => '0',
 			),
 			'paths' => array(
 				'/' => array(),
@@ -65,7 +53,7 @@ class SwaggerTest extends PHPUnit_Framework_TestCase
 			'swagger' => '2.0',
 			'info' => array(
 				'title' => 'undefined',
-				'version' => 0,
+				'version' => '0',
 			),
 			'host' => 'http://localhost',
 			'paths' => array(
@@ -89,7 +77,7 @@ class SwaggerTest extends PHPUnit_Framework_TestCase
 			'swagger' => '2.0',
 			'info' => array(
 				'title' => 'undefined',
-				'version' => 0,
+				'version' => '0',
 			),
 			'host' => 'http://localhost',
 			'basePath' => 'api',
@@ -160,7 +148,7 @@ class SwaggerTest extends PHPUnit_Framework_TestCase
 			'swagger' => '2.0',
 			'info' => array(
 				'title' => 'undefined',
-				'version' => 0,
+				'version' => '0',
 			),
 			'paths' => array(
 				'/' => array(),
@@ -186,7 +174,7 @@ class SwaggerTest extends PHPUnit_Framework_TestCase
 			'swagger' => '2.0',
 			'info' => array(
 				'title' => 'undefined',
-				'version' => 0,
+				'version' => '0',
 			),
 			'schemes' => array(
 				'http',
@@ -219,7 +207,7 @@ class SwaggerTest extends PHPUnit_Framework_TestCase
 			'swagger' => '2.0',
 			'info' => array(
 				'title' => 'undefined',
-				'version' => 0,
+				'version' => '0',
 			),
 			'schemes' => array(
 				'http',
@@ -250,7 +238,7 @@ class SwaggerTest extends PHPUnit_Framework_TestCase
 			'swagger' => '2.0',
 			'info' => array(
 				'title' => 'undefined',
-				'version' => 0,
+				'version' => '0',
 			),
 			'paths' => array(
 				'/' => array(),
@@ -276,7 +264,7 @@ class SwaggerTest extends PHPUnit_Framework_TestCase
 			'swagger' => '2.0',
 			'info' => array(
 				'title' => 'undefined',
-				'version' => 0,
+				'version' => '0',
 			),
 			'consumes' => array(
 				'image/png',
@@ -309,7 +297,7 @@ class SwaggerTest extends PHPUnit_Framework_TestCase
 			'swagger' => '2.0',
 			'info' => array(
 				'title' => 'undefined',
-				'version' => 0,
+				'version' => '0',
 			),
 			'consumes' => array(
 				'application/json',
@@ -340,7 +328,7 @@ class SwaggerTest extends PHPUnit_Framework_TestCase
 			'swagger' => '2.0',
 			'info' => array(
 				'title' => 'undefined',
-				'version' => 0,
+				'version' => '0',
 			),
 			'paths' => array(
 				'/' => array(),
@@ -366,7 +354,7 @@ class SwaggerTest extends PHPUnit_Framework_TestCase
 			'swagger' => '2.0',
 			'info' => array(
 				'title' => 'undefined',
-				'version' => 0,
+				'version' => '0',
 			),
 			'produces' => array(
 				'image/png',
@@ -399,7 +387,7 @@ class SwaggerTest extends PHPUnit_Framework_TestCase
 			'swagger' => '2.0',
 			'info' => array(
 				'title' => 'undefined',
-				'version' => 0,
+				'version' => '0',
 			),
 			'produces' => array(
 				'application/json',
@@ -446,7 +434,7 @@ class SwaggerTest extends PHPUnit_Framework_TestCase
 			'swagger' => '2.0',
 			'info' => array(
 				'title' => 'undefined',
-				'version' => 0,
+				'version' => '0',
 			),
 			'paths' => array(
 				'/' => array(
@@ -489,7 +477,7 @@ class SwaggerTest extends PHPUnit_Framework_TestCase
 			'swagger' => '2.0',
 			'info' => array(
 				'title' => 'undefined',
-				'version' => 0,
+				'version' => '0',
 			),
 			'paths' => array(
 				'/' => array(
@@ -534,7 +522,7 @@ class SwaggerTest extends PHPUnit_Framework_TestCase
 			'swagger' => '2.0',
 			'info' => array(
 				'title' => 'undefined',
-				'version' => 0,
+				'version' => '0',
 			),
 			'paths' => array(
 				'/' => array(),
@@ -563,7 +551,7 @@ class SwaggerTest extends PHPUnit_Framework_TestCase
 			'swagger' => '2.0',
 			'info' => array(
 				'title' => 'undefined',
-				'version' => 0,
+				'version' => '0',
 			),
 			'paths' => array(
 				'/' => array(),
@@ -586,7 +574,7 @@ class SwaggerTest extends PHPUnit_Framework_TestCase
 			'swagger' => '2.0',
 			'info' => array(
 				'title' => 'undefined',
-				'version' => 0,
+				'version' => '0',
 			),
 			'paths' => array(
 				'/users/:userid/rights' => array(),
@@ -609,7 +597,7 @@ class SwaggerTest extends PHPUnit_Framework_TestCase
 			'swagger' => '2.0',
 			'info' => array(
 				'title' => 'undefined',
-				'version' => 0,
+				'version' => '0',
 			),
 			'paths' => array(
 				'/users/:userid/rights' => array(),
@@ -617,6 +605,36 @@ class SwaggerTest extends PHPUnit_Framework_TestCase
 			'tags' => array(
 				array(
 					'name' => 'Users',
+				),
+			),
+				), $object->toArray());
+	}
+
+	/**
+	 * @covers \SwaggerGen\Swagger\Swagger::__construct
+	 */
+	public function testHandleCommand_EndPoint_Tag_NoDescriptionOverwrite()
+	{
+		$object = new \SwaggerGen\Swagger\Swagger();
+		$this->assertInstanceOf('\SwaggerGen\Swagger\Swagger', $object);
+
+		$path = $object->handleCommand('api', 'Users something here');
+		$path = $object->handleCommand('endpoint', 'users/:userid/rights Users');
+		$this->assertInstanceOf('\SwaggerGen\Swagger\Path', $path);
+
+		$this->assertSame(array(
+			'swagger' => '2.0',
+			'info' => array(
+				'title' => 'undefined',
+				'version' => '0',
+			),
+			'paths' => array(
+				'/users/:userid/rights' => array(),
+			),
+			'tags' => array(
+				array(
+					'name' => 'Users',
+					'description' => 'something here',
 				),
 			),
 				), $object->toArray());
@@ -637,7 +655,7 @@ class SwaggerTest extends PHPUnit_Framework_TestCase
 			'swagger' => '2.0',
 			'info' => array(
 				'title' => 'undefined',
-				'version' => 0,
+				'version' => '0',
 			),
 			'paths' => array(
 				'/users/:userid/rights' => array(),
@@ -671,7 +689,7 @@ class SwaggerTest extends PHPUnit_Framework_TestCase
 		$object = new \SwaggerGen\Swagger\Swagger();
 		$this->assertInstanceOf('\SwaggerGen\Swagger\Swagger', $object);
 
-		$this->setExpectedException('\SwaggerGen\Exception', "Security scheme type must be either 'basic', 'apiKey' or 'oauth2', not ''");
+		$this->setExpectedException('\SwaggerGen\Exception', "Missing security type");
 		$path = $object->handleCommand('security', 'foo');
 	}
 
@@ -705,7 +723,7 @@ class SwaggerTest extends PHPUnit_Framework_TestCase
 			'swagger' => '2.0',
 			'info' => array(
 				'title' => 'undefined',
-				'version' => 0,
+				'version' => '0',
 			),
 			'paths' => array(
 				'/' => array(),
@@ -765,11 +783,11 @@ class SwaggerTest extends PHPUnit_Framework_TestCase
 		$path = $object->handleCommand('endpoint');
 		$this->assertInstanceOf('\SwaggerGen\Swagger\Path', $path);
 
-		$this->assertSame(array(
+		$this->assertEquals(array(
 			'swagger' => '2.0',
 			'info' => array(
 				'title' => 'undefined',
-				'version' => 0,
+				'version' => '0',
 			),
 			'paths' => array(
 				'/' => array(),
@@ -780,7 +798,9 @@ class SwaggerTest extends PHPUnit_Framework_TestCase
 				),
 			),
 			'security' => array(
-				'foo' => array(),
+				array(
+					'foo' => array(),
+				),
 			),
 				), $object->toArray());
 	}
@@ -788,48 +808,36 @@ class SwaggerTest extends PHPUnit_Framework_TestCase
 	/**
 	 * @covers \SwaggerGen\Swagger\Swagger::__construct
 	 */
-	public function testHandleCommand_Define_Empty()
-	{
-		$object = new \SwaggerGen\Swagger\Swagger();
-		$this->assertInstanceOf('\SwaggerGen\Swagger\Swagger', $object);
-
-		$this->setExpectedException('\SwaggerGen\Exception', "Unsupported definition type: ''");
-		$object->handleCommand('define');
-	}
-
-	/**
-	 * @covers \SwaggerGen\Swagger\Swagger::__construct
-	 */
-	public function testHandleCommand_Define_Unsupported()
-	{
-		$object = new \SwaggerGen\Swagger\Swagger();
-		$this->assertInstanceOf('\SwaggerGen\Swagger\Swagger', $object);
-
-		$this->setExpectedException('\SwaggerGen\Exception', "Unsupported definition type: 'foo'");
-		$object->handleCommand('define', 'foo');
-	}
-
-	/**
-	 * @covers \SwaggerGen\Swagger\Swagger::__construct
-	 */
-	public function testHandleCommand_Define_NoName()
+	public function testHandleCommand_Definition_Empty()
 	{
 		$object = new \SwaggerGen\Swagger\Swagger();
 		$this->assertInstanceOf('\SwaggerGen\Swagger\Swagger', $object);
 
 		$this->setExpectedException('\SwaggerGen\Exception', "Missing definition name");
-		$object->handleCommand('define', 'params');
+		$object->handleCommand('definition');
 	}
 
 	/**
 	 * @covers \SwaggerGen\Swagger\Swagger::__construct
 	 */
-	public function testHandleCommand_Define()
+	public function testHandleCommand_Definition_NoName()
 	{
 		$object = new \SwaggerGen\Swagger\Swagger();
 		$this->assertInstanceOf('\SwaggerGen\Swagger\Swagger', $object);
 
-		$schema = $object->handleCommand('define', 'params foo');
+		$this->setExpectedException('\SwaggerGen\Exception', "Missing definition name");
+		$object->handleCommand('definition', '');
+	}
+
+	/**
+	 * @covers \SwaggerGen\Swagger\Swagger::__construct
+	 */
+	public function testHandleCommand_Definition()
+	{
+		$object = new \SwaggerGen\Swagger\Swagger();
+		$this->assertInstanceOf('\SwaggerGen\Swagger\Swagger', $object);
+
+		$schema = $object->handleCommand('definition', 'foo');
 		$this->assertInstanceOf('\SwaggerGen\Swagger\Schema', $schema);
 
 
@@ -840,7 +848,7 @@ class SwaggerTest extends PHPUnit_Framework_TestCase
 			'swagger' => '2.0',
 			'info' => array(
 				'title' => 'undefined',
-				'version' => 0,
+				'version' => '0',
 			),
 			'paths' => array(
 				'/' => array(),
@@ -864,6 +872,60 @@ class SwaggerTest extends PHPUnit_Framework_TestCase
 		$schema = $object->handleCommand('model', 'foo');
 		$this->assertInstanceOf('\SwaggerGen\Swagger\Schema', $schema);
 
+		$path = $object->handleCommand('endpoint');
+		$this->assertInstanceOf('\SwaggerGen\Swagger\Path', $path);
+
+		$this->assertSame(array(
+			'swagger' => '2.0',
+			'info' => array(
+				'title' => 'undefined',
+				'version' => '0',
+			),
+			'paths' => array(
+				'/' => array(),
+			),
+			'definitions' => array(
+				'foo' => array(
+					'type' => 'object',
+				),
+			),
+				), $object->toArray());
+	}
+
+	/**
+	 * @covers \SwaggerGen\Swagger\Swagger::__construct
+	 */
+	public function testHandleCommand_Response_NoType()
+	{
+		$object = new \SwaggerGen\Swagger\Swagger();
+		$this->assertInstanceOf('\SwaggerGen\Swagger\Swagger', $object);
+
+		$this->setExpectedException('\SwaggerGen\Exception', "Response definition missing description");
+		$response = $object->handleCommand('response', 'NotFound');
+	}
+
+	/**
+	 * @covers \SwaggerGen\Swagger\Swagger::__construct
+	 */
+	public function testHandleCommand_Response_NoDescription()
+	{
+		$object = new \SwaggerGen\Swagger\Swagger();
+		$this->assertInstanceOf('\SwaggerGen\Swagger\Swagger', $object);
+
+		$this->setExpectedException('\SwaggerGen\Exception', "Response definition missing description");
+		$response = $object->handleCommand('response', 'NotFound null');
+	}
+
+	/**
+	 * @covers \SwaggerGen\Swagger\Swagger::__construct
+	 */
+	public function testHandleCommand_Response_WithoutDefinition()
+	{
+		$object = new \SwaggerGen\Swagger\Swagger();
+		$this->assertInstanceOf('\SwaggerGen\Swagger\Swagger', $object);
+
+		$response = $object->handleCommand('response', 'NotFound null Entity not found');
+		$this->assertInstanceOf('\SwaggerGen\Swagger\Response', $response);
 
 		$path = $object->handleCommand('endpoint');
 		$this->assertInstanceOf('\SwaggerGen\Swagger\Path', $path);
@@ -872,14 +934,49 @@ class SwaggerTest extends PHPUnit_Framework_TestCase
 			'swagger' => '2.0',
 			'info' => array(
 				'title' => 'undefined',
-				'version' => 0,
+				'version' => '0',
 			),
 			'paths' => array(
 				'/' => array(),
 			),
-			'definitions' => array(
-				'foo' => array(
-					'type' => 'object',
+			'responses' => array(
+				'NotFound' => array(
+					'description' => 'Entity not found',
+				),
+			),
+				), $object->toArray());
+	}
+
+	/**
+	 * @covers \SwaggerGen\Swagger\Swagger::__construct
+	 */
+	public function testHandleCommand_Response_WithDefinition()
+	{
+		$object = new \SwaggerGen\Swagger\Swagger();
+		$this->assertInstanceOf('\SwaggerGen\Swagger\Swagger', $object);
+
+		$response = $object->handleCommand('response', 'NotFound int Entity not found');
+		$this->assertInstanceOf('\SwaggerGen\Swagger\Response', $response);
+
+		$path = $object->handleCommand('endpoint');
+		$this->assertInstanceOf('\SwaggerGen\Swagger\Path', $path);
+
+		$this->assertSame(array(
+			'swagger' => '2.0',
+			'info' => array(
+				'title' => 'undefined',
+				'version' => '0',
+			),
+			'paths' => array(
+				'/' => array(),
+			),
+			'responses' => array(
+				'NotFound' => array(
+					'description' => 'Entity not found',
+					'schema' => array(
+						'type' => 'integer',
+						'format' => 'int32'
+					),
 				),
 			),
 				), $object->toArray());

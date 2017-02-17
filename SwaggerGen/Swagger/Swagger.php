@@ -7,7 +7,7 @@ namespace SwaggerGen\Swagger;
  *
  * @package    SwaggerGen
  * @author     Martijn van der Lee <martijn@vanderlee.com>
- * @copyright  2014-2015 Martijn van der Lee
+ * @copyright  2014-2016 Martijn van der Lee
  * @license    https://opensource.org/licenses/MIT MIT
  */
 class Swagger extends AbstractDocumentableObject
@@ -20,34 +20,49 @@ class Swagger extends AbstractDocumentableObject
 	/**
 	 * @var Info $Info
 	 */
-	private $Info;
+	private $info;
 	private $schemes = array();
 	private $consumes = array();
 	private $produces = array();
 
 	/**
-	 * @var Path[] $Paths
+	 * @var \SwaggerGen\Swagger\Path[] $Paths
 	 */
-	private $Paths = array();
+	private $paths = array();
+
+	/**
+	 * @var \SwaggerGen\Swagger\Schema[] $definitions
+	 */
 	private $definitions = array();
+
+	/**
+	 * @var \SwaggerGen\Swagger\IParameter[] $parameters
+	 */
+	private $parameters = array();
+
+	/**
+	 * @var \SwaggerGen\Swagger\Response[] $responses
+	 */
+	private $responses = array();
 
 	/**
 	 * @var Tag[] $Tags
 	 */
-	private $Tags = array();
+	private $tags = array();
 
 	/**
 	 * Default tag for new endpoints/operations. Set by the api command.
 	 * @var Tag
 	 */
 	private $defaultTag = null;
-	//private $parameters;
-	//private $responses;
 	private $securityDefinitions = array();
 	private $security = array();
 
-	//private $security;
-
+	/**
+	 * @inheritDoc
+	 * @param string $host
+	 * @param string $basePath
+	 */
 	public function __construct($host = null, $basePath = null)
 	{
 		parent::__construct(null);
@@ -55,10 +70,13 @@ class Swagger extends AbstractDocumentableObject
 		$this->host = $host;
 		$this->basePath = $basePath;
 
-		$this->Info = new Info($this);
+		$this->info = new Info($this);
 	}
 
-	protected function getRoot()
+	/**
+	 * @inheritDoc
+	 */
+	protected function getSwagger()
 	{
 		return $this;
 	}
@@ -78,7 +96,8 @@ class Swagger extends AbstractDocumentableObject
 	 * @param string $name
 	 * @return boolean|SecurityScheme
 	 */
-	public function getSecurity($name) {
+	public function getSecurity($name)
+	{
 		if (isset($this->securityDefinitions[$name])) {
 			return $this->securityDefinitions[$name];
 		}
@@ -86,6 +105,11 @@ class Swagger extends AbstractDocumentableObject
 		return false;
 	}
 
+	/**
+	 * @param string $command
+	 * @param string $data
+	 * @return \SwaggerGen\Swagger\AbstractObject|boolean
+	 */
 	public function handleCommand($command, $data = null)
 	{
 		switch (strtolower($command)) {
@@ -98,46 +122,63 @@ class Swagger extends AbstractDocumentableObject
 			case 'termsofservice':
 			case 'contact':
 			case 'license':
-				return $this->Info->handleCommand($command, $data);
+				return $this->info->handleCommand($command, $data);
 
 			// string[]
 			case 'scheme':
 			case 'schemes':
-				$this->$command = array_unique(array_merge($this->$command, self::wordSplit($data)));
+				$this->schemes = array_unique(array_merge($this->schemes, self::wordSplit($data)));
 				return $this;
 
 			// MIME[]
 			case 'consume':
 			case 'consumes':
-			case 'produce':
-			case 'produces':
-				$this->$command = array_merge($this->$command, self::translateMimeTypes(self::wordSplit($data)));
+				$this->consumes = array_merge($this->consumes, self::translateMimeTypes(self::wordSplit($data)));
 				return $this;
 
-			case 'model': // alias
-				$data = 'params ' . $data;
-			case 'define':
+			case 'produce':
+			case 'produces':
+				$this->produces = array_merge($this->produces, self::translateMimeTypes(self::wordSplit($data)));
+				return $this;
+
+			case 'model':
 			case 'definition':
-				$type = self::wordShift($data);
-				switch ($type) {
-//					case 'response':
-//						$definition = new SwaggerResponseDefinition($this);
-//						break;
-					case 'params':
-					case 'parameters': // alias
-						$definition = new Schema($this);
-						break;
-
-					default:
-						throw new \SwaggerGen\Exception("Unsupported definition type: '{$type}'");
-				}
-
+				$definition = new Schema($this);
 				$name = self::wordShift($data);
 				if (empty($name)) {
 					throw new \SwaggerGen\Exception('Missing definition name');
 				}
 				$this->definitions[$name] = $definition;
 				return $definition;
+
+			case 'path':
+			case 'query':
+			case 'query?':
+			case 'header':
+			case 'header?':
+			case 'form':
+			case 'form?':
+				$in = rtrim($command, '?');
+				$Parameter = new Parameter($this, $in, $data, substr($command, -1) !== '?');
+				$this->parameters[$Parameter->getName()] = $Parameter;
+				return $Parameter;
+
+			case 'body':
+			case 'body?':
+				$Parameter = new BodyParameter($this, $data, substr($command, -1) !== '?');
+				$this->parameters[$Parameter->getName()] = $Parameter;
+				return $Parameter;
+
+			case 'response':
+				$name = self::wordShift($data);
+				$definition = self::wordShift($data);
+				$description = $data;
+				if (empty($description)) {
+					throw new \SwaggerGen\Exception('Response definition missing description');
+				}
+				$Response = new Response($this, $name, $definition === 'null' ? null : $definition, $description);
+				$this->responses[$name] = $Response;
+				return $Response;
 
 			case 'api': // alias
 			case 'tag':
@@ -147,7 +188,7 @@ class Swagger extends AbstractDocumentableObject
 				}
 
 				$Tag = null;
-				foreach ($this->Tags as $T) {
+				foreach ($this->tags as $T) {
 					if ($T->getName() === $tagname) {
 						$Tag = $T;
 						break;
@@ -155,10 +196,11 @@ class Swagger extends AbstractDocumentableObject
 				}
 				if (!$Tag) {
 					$Tag = new Tag($this, $tagname, $data);
-					$this->Tags[] = $Tag;
+					$this->tags[] = $Tag;
 				}
-				// @todo remove this; it's for backwards compatibility only
-				if ($command === 'api') { // backwards compatibility
+
+				// backwards compatibility
+				if ($command === 'api') {
 					$this->defaultTag = $Tag;
 				}
 				return $Tag;
@@ -171,7 +213,7 @@ class Swagger extends AbstractDocumentableObject
 
 				$Tag = null;
 				if (($tagname = self::wordShift($data)) !== false) {
-					foreach ($this->Tags as $T) {
+					foreach ($this->tags as $T) {
 						if (strtolower($T->getName()) === strtolower($tagname)) {
 							$Tag = $T;
 							break;
@@ -179,14 +221,14 @@ class Swagger extends AbstractDocumentableObject
 					}
 					if (!$Tag) {
 						$Tag = new Tag($this, $tagname, $data);
-						$this->Tags[] = $Tag;
+						$this->tags[] = $Tag;
 					}
 				}
 
-				if (!isset($this->Paths[$path])) {
-					$this->Paths[$path] = new Path($this, $Tag ? : $this->defaultTag);
+				if (!isset($this->paths[$path])) {
+					$this->paths[$path] = new Path($this, $Tag ?: $this->defaultTag);
 				}
-				return $this->Paths[$path];
+				return $this->paths[$path];
 
 			case 'security':
 				$name = self::wordShift($data);
@@ -194,6 +236,9 @@ class Swagger extends AbstractDocumentableObject
 					throw new \SwaggerGen\Exception('Missing security name');
 				}
 				$type = self::wordShift($data);
+				if (empty($type)) {
+					throw new \SwaggerGen\Exception('Missing security type');
+				}
 				$SecurityScheme = new SecurityScheme($this, $type, $data);
 				$this->securityDefinitions[$name] = $SecurityScheme;
 				return $SecurityScheme;
@@ -203,19 +248,25 @@ class Swagger extends AbstractDocumentableObject
 				if (empty($name)) {
 					throw new \SwaggerGen\Exception('Missing require name');
 				}
-				$this->security[$name] = self::wordSplit($data);
+				$scopes = self::wordSplit($data);
+				sort($scopes);
+				$this->security[] = array(
+					$name => empty($scopes) ? array() : $scopes,
+				);
 				return $this;
 		}
 
 		return parent::handleCommand($command, $data);
 	}
 
+	/**
+	 * @inheritDoc
+	 */
 	public function toArray()
 	{
-		if (empty($this->Paths)) {
+		if (empty($this->paths)) {
 			throw new \SwaggerGen\Exception('No path defined');
 		}
-
 
 		$schemes = array_unique($this->schemes);
 		sort($schemes);
@@ -226,33 +277,63 @@ class Swagger extends AbstractDocumentableObject
 		$produces = array_unique($this->produces);
 		sort($produces);
 
-		foreach ($this->security as $name => $scopes) {
-			if (!isset($this->securityDefinitions[$name])) {
-				throw new \SwaggerGen\Exception("Required security scheme not defined: '{$name}'");
+		foreach ($this->security as $security) {
+			foreach ($security as $name => $scopes) {
+				if (!isset($this->securityDefinitions[$name])) {
+					throw new \SwaggerGen\Exception("Required security scheme not defined: '{$name}'");
+				}
 			}
 		}
 
 		return self::arrayFilterNull(array_merge(array(
 					'swagger' => $this->swagger,
-					'info' => $this->Info->toArray(),
+					'info' => $this->info->toArray(),
 					'host' => empty($this->host) ? null : $this->host,
 					'basePath' => empty($this->basePath) ? null : $this->basePath,
 					'consumes' => $consumes,
 					'produces' => $produces,
-//					'parameters' => $this->parameters ? $this->parameters->toArray() : null,
 					'schemes' => $schemes,
-					'paths' => self::objectsToArray($this->Paths),
+					'paths' => self::objectsToArray($this->paths),
 					'definitions' => self::objectsToArray($this->definitions),
-//					'responses' => $this->responses ? $this->responses->toArray() : null,
+					'parameters' => self::objectsToArray($this->parameters),
+					'responses' => self::objectsToArray($this->responses),
 					'securityDefinitions' => self::objectsToArray($this->securityDefinitions),
 					'security' => $this->security,
-					'tags' => self::objectsToArray($this->Tags),
+					'tags' => self::objectsToArray($this->tags),
 								), parent::toArray()));
 	}
 
 	public function __toString()
 	{
 		return __CLASS__;
+	}
+
+	/**
+	 * Check if an operation with the given id exists.
+	 * 
+	 * @param string $operationId
+	 * @return boolean
+	 */
+	public function hasOperationId($operationId)
+	{
+		foreach ($this->paths as $path) {
+			if ($path->hasOperationId($operationId)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Check if a definition with the given name exists
+	 * 
+	 * @param string $name
+	 * @return boolean
+	 */
+	public function hasDefinition($name)
+	{
+		return isset($this->definitions[$name]);
 	}
 
 }

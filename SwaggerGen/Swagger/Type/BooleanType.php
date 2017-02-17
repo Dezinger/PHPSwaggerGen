@@ -15,7 +15,6 @@ class BooleanType extends AbstractType
 
 	const REGEX_DEFAULT = '(?:=(true|false|1|0))?';
 
-	//private $allowEmptyValue; // for query/formData
 	private $default = null;
 
 	protected function parseDefinition($definition)
@@ -34,6 +33,11 @@ class BooleanType extends AbstractType
 		}
 	}
 
+	/**
+	 * @param string $command The comment command
+	 * @param string $data Any data added after the command
+	 * @return \SwaggerGen\Swagger\Type\AbstractType|boolean
+	 */
 	public function handleCommand($command, $data = null)
 	{
 		switch (strtolower($command)) {

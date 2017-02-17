@@ -32,6 +32,10 @@ namespace SwaggerGen;
  */
 class SwaggerGen
 {
+	const FORMAT_ARRAY = '';
+	const FORMAT_JSON = 'json';
+	const FORMAT_JSON_PRETTY = 'json+';
+	const FORMAT_YAML = 'yaml';
 
 	private $host;
 	private $basePath;
@@ -69,36 +73,39 @@ class SwaggerGen
 	/**
 	 * @param string $file
 	 * @param string[] $dirs
-	 * @return Php\Entity\Statement[]
+	 * @return Statement[]
 	 */
 	private function parseTextFile($file, $dirs)
 	{
 		$Parser = new Parser\Text\Parser();
-		return $Parser->parse($file, $dirs);
+		return $Parser->parse($file, $dirs, $this->defines);
 	}
 
 	/**
-	 * @param string $file
+	 * @param string $text
 	 * @param string[] $dirs
 	 * @return Php\Entity\Statement[]
 	 */
 	private function parseText($text, $dirs)
 	{
 		$Parser = new Parser\Text\Parser();
-		return $Parser->parseText($text, $dirs);
+		return $Parser->parseText($text, $dirs, $this->defines);
 	}
 
 	/**
+	 * Get Swagger 2.x output
 	 *
-	 * @param type $files
-	 * @param type $dirs
+	 * @param string[] $files
+	 * @param string[] $dirs
+	 * @param string $format
 	 * @return type
+	 * @throws \SwaggerGen\Exception
 	 */
-	public function getSwagger($files, $dirs = array())
+	public function getSwagger($files, $dirs = array(), $format = self::FORMAT_ARRAY)
 	{
 		$dirs = array_merge($this->dirs, $dirs);
 
-		$Statements = array();
+		$statements = array();
 		foreach ($files as $file) {
 			switch (pathinfo($file, PATHINFO_EXTENSION)) {
 				case 'php':
@@ -114,52 +121,76 @@ class SwaggerGen
 					break;
 			}
 
-			$Statements = array_merge($Statements, $fileStatements);
+			$statements = array_merge($statements, $fileStatements);
 		}
 
-		$Swagger = new Swagger\Swagger($this->host, $this->basePath);
+		$swagger = new Swagger\Swagger($this->host, $this->basePath);
 
-		$stack = array($Swagger); /* @var Swagger\AbstractObject[] $stack */
-		foreach ($Statements as $Statement) {
-			$top = end($stack);
+		$stack = array($swagger); /* @var Swagger\AbstractObject[] $stack */
+		foreach ($statements as $statement) {
+			try {
+				$top = end($stack);
 
-			do {
-				$result = $top->handleCommand($Statement->command, $Statement->data);
+				do {
+					$result = $top->handleCommand($statement->getCommand(), $statement->getData());
 
-				if ($result) {
-					if ($result !== $top) {
-						// Remove all similar classes from array first!
-						$classname = get_class($result);
-						$stack = array_filter($stack, function($class) use($classname) {
-							return !(is_a($class, $classname));
-						});
+					if ($result) {
+						if ($result !== $top) {
+							// Remove all similar classes from array first!
+							$classname = get_class($result);
+							$stack = array_filter($stack, function($class) use($classname) {
+								return !(is_a($class, $classname));
+							});
 
-						$stack[] = $result;
+							$stack[] = $result;
+						}
+					} else {
+						$top = prev($stack);
 					}
-				} else {
-					$top = prev($stack);
-				}
-			} while (!$result && $top);
+				} while (!$result && $top);
+			} catch (\SwaggerGen\Exception $e) {
+				throw new \SwaggerGen\StatementException($e->getMessage(), $e->getCode(), $e, $statement);
+			}
 
 			if (!$result && !$top) {
-				$messages = array('Unsupported or unknown command: ' . $Statement);
-				if (!empty($this->Paths)) {
-					end($this->Paths);
-					$messages[] = 'Current endpoint is ' . key($this->Paths);
-				}
+				$messages = array("Unsupported or unknown command: {$statement->getCommand()} {$statement->getData()}");
 
 				$stacktrace = array();
 				foreach ($stack as $object) {
-					$stacktrace[] = (string)$object;
+					$stacktrace[] = (string) $object;
 				}
 				$messages[] = join(", \n", $stacktrace);
-				
 
-				throw new \SwaggerGen\Exception(join('. ', $messages));
+				throw new \SwaggerGen\StatementException(join('. ', $messages), 0, null, $statement);
 			}
 		}
 
-		return $Swagger->toArray();
+		$output = $swagger->toArray();
+
+		switch ($format) {
+			case self::FORMAT_JSON:
+				$output = json_encode($output);
+				break;
+
+			case self::FORMAT_JSON_PRETTY:
+				$flags = (defined('JSON_PRETTY_PRINT') ? JSON_PRETTY_PRINT : 0); // Since PHP 5.4.0
+				$output = json_encode($output, $flags);
+				break;
+
+			case self::FORMAT_YAML:
+				if (!function_exists('yaml_emit')) {
+					throw new Exception('YAML extension not installed.');
+				}
+				array_walk_recursive($output, function(&$value) {
+					if (is_object($value)) {
+						$value = (array) $value;
+					}
+				});
+				$output = yaml_emit($output, YAML_UTF8_ENCODING, YAML_LN_BREAK);
+				break;
+		}
+
+		return $output;
 	}
 
 }

@@ -120,6 +120,11 @@ class Response extends AbstractObject
 		}
 	}
 
+	/**
+	 * @param string $command
+	 * @param string $data
+	 * @return \SwaggerGen\Swagger\AbstractObject|boolean
+	 */
 	public function handleCommand($command, $data = null)
 	{
 		switch (strtolower($command)) {
@@ -146,7 +151,6 @@ class Response extends AbstractObject
 					'description' => $this->description,
 					'schema' => $this->schema ? $this->schema->toArray() : null,
 					'headers' => self::objectsToArray($this->Headers),
-//			'examples' => $this->examples ? self::array_toArray($this->examples) : null,
 								), parent::toArray()));
 	}
 

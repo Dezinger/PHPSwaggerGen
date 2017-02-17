@@ -22,16 +22,24 @@ class Parser implements \SwaggerGen\Parser\IParser
 	protected $common_dirs = array();
 
 	/**
+	 * @var \SwaggerGen\Parser\AbstractPreprocessor
+	 */
+	private $Preprocessor;
+	private $dirs = array();
+
+	/**
 	 * Create a new text parser and set directories to scan for referenced
 	 * class files.
 	 *
 	 * @param string[] $dirs
 	 */
-	public function __construct(Array $dirs = array())
+	public function __construct(array $dirs = array())
 	{
 		foreach ($dirs as $dir) {
 			$this->common_dirs[] = realpath($dir);
 		}
+
+		$this->Preprocessor = new Preprocessor();
 	}
 
 	/**
@@ -39,7 +47,7 @@ class Parser implements \SwaggerGen\Parser\IParser
 	 *
 	 * @param string[] $dirs
 	 */
-	public function addDirs(Array $dirs)
+	public function addDirs(array $dirs)
 	{
 		foreach ($dirs as $dir) {
 			$this->common_dirs[] = realpath($dir);
@@ -51,9 +59,10 @@ class Parser implements \SwaggerGen\Parser\IParser
 	 *
 	 * @param string $file
 	 * @param string[] $dirs
+	 * @param string[] $defines
 	 * @return \SwaggerGen\Statement[]
 	 */
-	public function parse($file, Array $dirs = array())
+	public function parse($file, array $dirs = array(), array $defines = array())
 	{
 		return $this->parseText(file_get_contents(realpath($file)), $dirs);
 	}
@@ -63,22 +72,27 @@ class Parser implements \SwaggerGen\Parser\IParser
 	 *
 	 * @param string $text
 	 * @param string[] $dirs
+	 * @param string[] $defines
 	 * @return \SwaggerGen\Statement
 	 */
-	public function parseText($text, Array $dirs = array())
+	public function parseText($text, array $dirs = array(), array $defines = array())
 	{
 		$this->dirs = $this->common_dirs;
 		foreach ($dirs as $dir) {
 			$this->dirs[] = realpath($dir);
 		}
 
+		$this->Preprocessor->resetDefines();
+		$this->Preprocessor->addDefines($defines);
+		$text = $this->Preprocessor->preprocess($text);
+
 		$Statements = array();
 
-		foreach (preg_split('/\\R/m', $text) as $line) {
-			$line = trim($line);
-			$command = self::wordShift($line);
+		foreach (preg_split('/\\R/m', $text) as $line => $data) {
+			$data = trim($data);
+			$command = self::wordShift($data);
 			if (!empty($command)) {
-				$Statements[] = new \SwaggerGen\Statement($command, $line);
+				$Statements[] = new \SwaggerGen\Statement($command, $data, null, $line);
 			}
 		}
 

@@ -5,15 +5,15 @@ class Parser_Php_ParserTest extends PHPUnit_Framework_TestCase
 
 	/**
 	 * Test if the statement matches the expected values
-	 * @param SwaggerGen\Parser\Php\Statement $statement
+	 * @param \SwaggerGen\Statement $statement
 	 * @param string $command
 	 * @param string $data
 	 */
-	private function assertStatement(SwaggerGen\Parser\Php\Statement $statement, $command, $data = '')
+	private function assertStatement($statement, $command, $data = '')
 	{
-		$this->assertInstanceOf('\SwaggerGen\Parser\Php\Statement', $statement);
-		$this->assertSame($command, $statement->command);
-		$this->assertSame($data, $statement->data);
+		$this->assertInstanceOf('\SwaggerGen\Statement', $statement);
+		$this->assertSame($command, $statement->getCommand());
+		$this->assertSame($data, $statement->getData());
 	}
 
 	/**
@@ -23,12 +23,12 @@ class Parser_Php_ParserTest extends PHPUnit_Framework_TestCase
 	 */
 	private function assertStatements(array $expected, array $statements)
 	{
-		$this->assertCount(count($expected), $statements);
+		$this->assertCount(count($expected), $statements, join("\n", $statements));
 		foreach ($expected as $index => $command) {
 			$statement = $statements[$index];
-			$this->assertInstanceOf('\SwaggerGen\Parser\Php\Statement', $statement);
-			$this->assertSame($command[0], $statement->command);
-			$this->assertSame($command[1], $statement->data);
+			$this->assertInstanceOf('\SwaggerGen\Statement', $statement);
+			$this->assertSame($command[0], $statement->getCommand());
+			$this->assertSame($command[1], $statement->getData());
 		}
 	}
 
@@ -55,6 +55,20 @@ class Parser_Php_ParserTest extends PHPUnit_Framework_TestCase
 	public function testAddDirs()
 	{
 		$this->markTestIncomplete('Not yet implemented.');
+	}
+
+	/**
+	 * Test all open-curlies are (ac-)counted for in functions
+	 * @covers \SwaggerGen\Parser\Php\Parser::parse
+	 */
+	public function testParse_CurlyBraceFunction()
+	{
+		$object = new \SwaggerGen\Parser\Php\Parser();
+		$this->assertInstanceOf('\SwaggerGen\Parser\Php\Parser', $object);
+
+		$statements = $object->parse(__DIR__ . '/ParserTest/testParse_CurlyBraceFunction.php');
+		$this->assertCount(6, $statements);
+		$this->assertStatement($statements[0], 'title', 'CurlyBraceFunction');
 	}
 
 	/**

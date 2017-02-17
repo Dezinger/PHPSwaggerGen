@@ -59,17 +59,17 @@ abstract class AbstractObject
 	}
 
 	/**
-	 * @return SwaggerGen\Swagger
+	 * @return \SwaggerGen\Swagger\Swagger
 	 */
-	protected function getRoot()
+	protected function getSwagger()
 	{
-		return $this->parent->getRoot();
+		return $this->parent->getSwagger();
 	}
 
 	/**
 	 * @param string $command
 	 * @param string $data
-	 * @return AbstractObject
+	 * @return \SwaggerGen\Swagger\AbstractObject|boolean
 	 */
 	public function handleCommand($command, $data = null)
 	{

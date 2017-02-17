@@ -23,6 +23,7 @@ class Schema extends AbstractDocumentableObject implements IDefinition
 		'float' => 'Number',
 		'double' => 'Number',
 		'string' => 'String',
+		'uuid' => 'StringUuid',
 		'byte' => 'String',
 		'binary' => 'String',
 		'password' => 'String',
@@ -38,42 +39,70 @@ class Schema extends AbstractDocumentableObject implements IDefinition
 		'datetime' => 'Date',
 		'date-time' => 'Date',
 		'object' => 'Object',
-			//'file'		=> 'File',	// @todo Only if parent is_a Response and with the right "produces" mime-type
 	);
 
 	/**
-	 *
-	 * @var type
+	 * @var string
 	 */
 	private $description = null;
-	private $type;
 
-	//private $required = false;
+	/**
+	 * @var string
+	 */
+	private $title = null;
+
+	/**
+	 * @var \SwaggerGen\Swagger\Type\AbstractType
+	 */
+	private $type;
 
 	public function __construct(AbstractObject $parent, $definition = 'object', $description = null)
 	{
 		parent::__construct($parent);
 
-		// Parse regex
-		$match = array();
-		preg_match('/^([a-z]+)/i', $definition, $match);
-		$format = strtolower($match[1]);
-		if (isset(self::$classTypes[$format])) {
-			$type = self::$classTypes[$format];
-			$class = "SwaggerGen\\Swagger\\Type\\{$type}Type";
-			$this->type = new $class($this, $definition);
-		} else {
+		// Check if definition set
+		if ($this->getSwagger()->hasDefinition($definition)) {
 			$this->type = new Type\ReferenceObjectType($this, $definition);
+		} else {
+			// Parse regex		
+			$match = array();
+			preg_match('/^([a-z]+)/i', $definition, $match);
+			$format = strtolower($match[1]);
+
+			// Internal type if type known and not overwritten by definition
+			if (isset(self::$classTypes[$format])) {
+				$type = self::$classTypes[$format];
+				$class = "SwaggerGen\\Swagger\\Type\\{$type}Type";
+				$this->type = new $class($this, $definition);
+			} else {
+				$this->type = new Type\ReferenceObjectType($this, $definition);
+			}		
 		}
 
 		$this->description = $description;
 	}
 
+	/**
+	 * @param string $command
+	 * @param string $data
+	 * @return \SwaggerGen\Swagger\AbstractObject|boolean
+	 */
 	public function handleCommand($command, $data = null)
 	{
 		// Pass through to Type
 		if ($this->type && $this->type->handleCommand($command, $data)) {
 			return $this;
+		}
+
+		// handle all the rest manually
+		switch (strtolower($command)) {
+			case 'description':
+				$this->description = $data;
+				return $this;
+				
+			case 'title':
+				$this->title = $data;
+				return $this;
 		}
 
 		return parent::handleCommand($command, $data);
@@ -82,6 +111,7 @@ class Schema extends AbstractDocumentableObject implements IDefinition
 	public function toArray()
 	{
 		return self::arrayFilterNull(array_merge($this->type->toArray(), array(
+					'title' => empty($this->title) ? null : $this->title,
 					'description' => empty($this->description) ? null : $this->description,
 								), parent::toArray()));
 	}
